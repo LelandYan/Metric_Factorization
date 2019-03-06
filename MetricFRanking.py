@@ -149,7 +149,7 @@ class MetricFRanking():
             if t_stop_num > stop_num:
                 # performance evaluation based on test set
 
-                r_aupr = 0
+                r_aupr = auc(np.sort(r_at_),r_at_[np.argsort(r_at_)])
                 for num_k in range(1, 7):
                     k = k_Mat[num_k - 1]
 
