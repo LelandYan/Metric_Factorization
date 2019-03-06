@@ -200,7 +200,7 @@ if __name__ == '__main__':
     Aupr_values = np.zeros([10, 1])
     df = load_data(path="data/DrDiAssMat2.dat", header=['user_id', 'item_id', 'rating'], sep=" ")
     with tf.Session() as sess:
-        train_data, neg_train_matrix, test_data, test_matrix, num_users, num_items, unique_users,unique_validation, validation_matrix = load_ranking_data(df)
+        train_data, neg_train_matrix, test_data,validation_data ,test_matrix, validation_matrix,num_users, num_items, unique_users,unique_validation= load_ranking_data(df)
         model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600)
         for num in range(1, 11):
             test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users,unique_validation ,neg_train_matrix,
