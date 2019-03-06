@@ -62,10 +62,6 @@ class MetricFRanking():
         self.sess.run(init)
         # train and test the model
         sample_size = 0
-        MF_recalls = []
-        Va_recalls = []
-        MF_precisions = []
-        MF_Aupr_vaules = []
         stop_num = 10
         t_stop_num = 0
         stop_threshold = 0.005
@@ -139,7 +135,7 @@ class MetricFRanking():
                 pred_ratings[u] = [r[0] for r in ranked_list[u]]
                 pred_ratings_[u] = pred_ratings[u][:k]
 
-                p_, r_ = precision_recall(k, pred_ratings_[u], test_matrix[u])
+                p_, r_ = precision_recall(k, pred_ratings_[u], validation_matrix[u])
                 p_at_.append(p_)
                 r_at_.append(r_)
 
@@ -150,6 +146,8 @@ class MetricFRanking():
                 pre_recall = np.mean(r_at_)
             if t_stop_num > stop_num:
                 # performance evaluation based on test set
+
+                r_aupr = 0
                 for num_k in range(1, 7):
                     k = k_Mat[num_k - 1]
 
@@ -181,7 +179,6 @@ class MetricFRanking():
                         p_at_.append(p_)
                         r_at_.append(r_)
 
-                    r_aupr = auc(np.sort(np.array(r_at_)), np.array(p_at_)[np.argsort(r_at_)])
                     # compute recall in chunks to utilize speedup provided by Tensorflow
                     r_recalls[:, num_k - 1] = np.mean(np.mean(r_at_))
                     r_precisions[:, num_k - 1] = np.mean(np.mean(p_at_))
@@ -201,7 +198,7 @@ if __name__ == '__main__':
     Aupr_values = np.zeros([10, 1])
     df = load_data(path="data/DrDiAssMat2.dat", header=['user_id', 'item_id', 'rating'], sep=" ")
     with tf.Session() as sess:
-        train_data, neg_train_matrix, test_data, test_matrix, num_users, num_items, unique_users, validation_matrix = load_ranking_data()
+        train_data, neg_train_matrix, test_data, test_matrix, num_users, num_items, unique_users, validation_matrix = load_ranking_data(df)
         model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600)
         for num in range(1, 11):
             test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users, neg_train_matrix,
