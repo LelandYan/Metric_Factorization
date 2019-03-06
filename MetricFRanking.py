@@ -139,7 +139,6 @@ class MetricFRanking():
                 pred_ratings_[u] = pred_ratings[u][:k]
                 p_, r_ = precision_recall(k, pred_ratings_[u], validation_matrix[u])
                 p_at_.append(p_)
-                r_at_.append(r_)
 
             if abs(np.mean(np.mean(r_at_) - pre_recall) < stop_threshold):
                 t_stop_num = t_stop_num + 1
