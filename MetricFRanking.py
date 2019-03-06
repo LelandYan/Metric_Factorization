@@ -18,7 +18,7 @@ class MetricFRanking():
         self.sess = sess
         self.beta = 2.5  # 2.5#0.6#2.5#1.5
 
-    def run(self, train_data, unique_users, neg_train_matrix, test_matrix, validation_matrix,k=5):
+    def run(self, train_data, unique_users,unique_validation, neg_train_matrix, test_matrix, validation_matrix,k=5):
         # train_data: 训练数据
         # unique_users: 用户ID列表
         # neg_train_matrix: 负面训练矩阵
@@ -71,12 +71,14 @@ class MetricFRanking():
         r_precisions = np.zeros([1, 6])
         epoch = 0
         while True:
-
             user_temp = user[:]
             item_temp = item[:]
             rating_temp = rating[:]
             epoch += 1
             # 从未评分的数据中采用负例
+            user_append = None
+            item_append = None
+            values_append = None
             if epoch % 5 == 0:
                 user_append = []
                 item_append = []
@@ -89,9 +91,10 @@ class MetricFRanking():
                     user_append += [u] * sample_size
                     item_append += list_of_random_items
                     values_append += [0] * sample_size
-            item_temp += item_append
-            user_temp += user_append
-            rating_temp += values_append
+            if user_append != None and item_append != None and values_append != None:
+                item_temp += item_append
+                user_temp += user_append
+                rating_temp += values_append
             self.num_training = len(rating_temp)
             total_batch = int(self.num_training / self.batch_size)
 
@@ -117,7 +120,7 @@ class MetricFRanking():
             count = 0
             p_at_ = []
             r_at_ = []
-            for u in unique_users:
+            for u in unique_validation:
                 user_ids = []
                 count += 1
                 user_neg_items = neg_train_matrix[u]
@@ -134,7 +137,6 @@ class MetricFRanking():
                 ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
                 pred_ratings[u] = [r[0] for r in ranked_list[u]]
                 pred_ratings_[u] = pred_ratings[u][:k]
-
                 p_, r_ = precision_recall(k, pred_ratings_[u], validation_matrix[u])
                 p_at_.append(p_)
                 r_at_.append(r_)
@@ -198,10 +200,10 @@ if __name__ == '__main__':
     Aupr_values = np.zeros([10, 1])
     df = load_data(path="data/DrDiAssMat2.dat", header=['user_id', 'item_id', 'rating'], sep=" ")
     with tf.Session() as sess:
-        train_data, neg_train_matrix, test_data, test_matrix, num_users, num_items, unique_users, validation_matrix = load_ranking_data(df)
+        train_data, neg_train_matrix, test_data, test_matrix, num_users, num_items, unique_users,unique_validation, validation_matrix = load_ranking_data(df)
         model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600)
         for num in range(1, 11):
-            test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users, neg_train_matrix,
+            test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users,unique_validation ,neg_train_matrix,
                                                                  test_matrix, validation_matrix)
             Ks_test_recalls[num - 1, :] = test_recalls
             Ks_test_precisions[num - 1, :] = test_precisions
