@@ -147,8 +147,30 @@ class MetricFRanking():
                 pre_recall = np.mean(r_at_)
             if t_stop_num > stop_num:
                 # performance evaluation based on test set
+                a = []
+                b = []
+                for u in unique_users:
+                    user_ids = []
+                    count += 1
+                    user_neg_items = neg_train_matrix[u]
+                    item_ids = []
 
-                r_aupr = auc(np.sort(r_at_),r_at_[np.argsort(r_at_)])
+                    for j in user_neg_items:
+                        item_ids.append(j)
+                        user_ids.append(u)
+                    ratings = - self.sess.run([self.pos_distances]
+                                              , feed_dict={self.cf_user_input: user_ids,
+                                                           self.cf_item_input: item_ids})[0]
+                    neg_item_index = list(zip(item_ids, ratings))
+
+                    ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
+                    pred_ratings[u] = [r[0] for r in ranked_list[u]]
+                    # pred_ratings_[u] = pred_ratings[u]
+                    s = len(pred_ratings[u])
+                    p_, r_ = precision_recall(s, pred_ratings_[u], test_matrix[u])
+                    a.append(p_)
+                    b.append(r_)
+                r_aupr = auc(np.sort(b),a[np.argsort(b)])
                 for num_k in range(1, 7):
                     k = k_Mat[num_k - 1]
 
