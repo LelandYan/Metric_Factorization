@@ -62,9 +62,9 @@ class MetricFRanking():
         self.sess.run(init)
         # train and test the model
         sample_size = 0
-        stop_num = 10
+        stop_num = 5
         t_stop_num = 0
-        stop_threshold = 0.5
+        stop_threshold = 0.05
         pre_recall = 0
         k_Mat = [5, 10, 20, 30, 40, 50]
         r_recalls = np.zeros([1, 6])
@@ -169,12 +169,12 @@ class MetricFRanking():
 
                     ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
                     pred_ratings[u] = [r[0] for r in ranked_list[u]]
-                    # pred_ratings_[u] = pred_ratings[u]
-                    s = len(test_matrix[u])
-                    p_, r_ = precision_recall(s, pred_ratings_[u], test_matrix[u])
+                    pred_ratings_[u] = pred_ratings[u][:k]
+                    #if pred_ratings_.get(u) == None or test_matrix.get(u) == None:continue
+                    p_, r_ = precision_recall(k, pred_ratings_[u], test_matrix[u])
                     a.append(p_)
                     b.append(r_)
-                r_aupr = auc(np.sort(b),a[np.argsort(b)])
+                r_aupr = auc(np.sort(b),np.array(a)[np.argsort(b)])
                 for num_k in range(1, 7):
                     k = k_Mat[num_k - 1]
 
