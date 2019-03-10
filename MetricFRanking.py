@@ -64,7 +64,7 @@ class MetricFRanking():
         sample_size = 0
         stop_num = 10
         t_stop_num = 0
-        stop_threshold = 0.005
+        stop_threshold = 0.5
         pre_recall = 0
         k_Mat = [5, 10, 20, 30, 40, 50]
         r_recalls = np.zeros([1, 6])
@@ -114,9 +114,9 @@ class MetricFRanking():
                                               feed_dict={self.cf_user_input: batch_user,
                                                          self.cf_item_input: batch_item,
                                                          self.y: batch_rating})
-            pred_ratings_ = {}
-            pred_ratings = {}
-            ranked_list = {}
+            pred_ratings__valid = {}
+            pred_ratings_valid = {}
+            ranked_list_valid = {}
             count = 0
             p_at_ = []
             r_at_ = []
@@ -134,11 +134,12 @@ class MetricFRanking():
                     0]
                 neg_item_index = list(zip(item_ids, ratings))
 
-                ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
-                pred_ratings[u] = [r[0] for r in ranked_list[u]]
-                pred_ratings_[u] = pred_ratings[u][:k]
-                p_, r_ = precision_recall(k, pred_ratings_[u], validation_matrix[u])
+                ranked_list_valid[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
+                pred_ratings_valid[u] = [r[0] for r in ranked_list_valid[u]]
+                pred_ratings__valid[u] = pred_ratings_valid[u][:k]
+                p_, r_ = precision_recall(k, pred_ratings__valid[u], validation_matrix[u])
                 p_at_.append(p_)
+                r_at_.append(r_)
 
             if abs(np.mean(np.mean(r_at_) - pre_recall) < stop_threshold):
                 t_stop_num = t_stop_num + 1
@@ -147,6 +148,9 @@ class MetricFRanking():
                 pre_recall = np.mean(r_at_)
             if t_stop_num > stop_num:
                 # performance evaluation based on test set
+                pred_ratings_ = {}
+                pred_ratings = {}
+                ranked_list = {}
                 a = []
                 b = []
                 for u in unique_users:
@@ -166,7 +170,7 @@ class MetricFRanking():
                     ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
                     pred_ratings[u] = [r[0] for r in ranked_list[u]]
                     # pred_ratings_[u] = pred_ratings[u]
-                    s = len(pred_ratings[u])
+                    s = len(test_matrix[u])
                     p_, r_ = precision_recall(s, pred_ratings_[u], test_matrix[u])
                     a.append(p_)
                     b.append(r_)
@@ -178,8 +182,8 @@ class MetricFRanking():
                     pred_ratings = {}
                     ranked_list = {}
                     count = 0
-                    p_at_ = []
-                    r_at_ = []
+                    p = []
+                    r = []
                     for u in unique_users:
                         user_ids = []
                         count += 1
@@ -199,12 +203,12 @@ class MetricFRanking():
                         pred_ratings_[u] = pred_ratings[u][:k]
 
                         p_, r_ = precision_recall(k, pred_ratings_[u], test_matrix[u])
-                        p_at_.append(p_)
-                        r_at_.append(r_)
+                        p.append(p_)
+                        r.append(r_)
 
                     # compute recall in chunks to utilize speedup provided by Tensorflow
-                    r_recalls[:, num_k - 1] = np.mean(np.mean(r_at_))
-                    r_precisions[:, num_k - 1] = np.mean(np.mean(p_at_))
+                    r_recalls[:, num_k - 1] = np.mean(np.mean(r))
+                    r_precisions[:, num_k - 1] = np.mean(np.mean(p))
                 break
 
         return r_recalls, r_precisions, r_aupr
