@@ -62,9 +62,9 @@ class MetricFRanking():
         self.sess.run(init)
         # train and test the model
         sample_size = 0
-        stop_num = 10
+        stop_num = 20
         t_stop_num = 0
-        stop_threshold = 0.05
+        stop_threshold = 0.005
         pre_recall = 0
         k_Mat = [5, 10, 20, 30, 40, 50]
         r_recalls = np.zeros([1, 6])
