@@ -16,9 +16,9 @@ class MetricFRanking():
         self.batch_size = batch_size
         self.clip_norm = 1
         self.sess = sess
-        self.beta = 2.5  # 2.5#0.6#2.5#1.5
+        self.beta = 3  # 2.5#0.6#2.5#1.5
 
-    def run(self, train_data, unique_users,unique_validation, neg_train_matrix, test_matrix, validation_matrix,k=5):
+    def run(self, train_data, unique_users,unique_validation, neg_train_matrix, test_matrix,  validation_matrix,k=5):
         # train_data: 训练数据
         # unique_users: 用户ID列表
         # neg_train_matrix: 负面训练矩阵
