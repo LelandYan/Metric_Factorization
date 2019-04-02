@@ -7,7 +7,7 @@ from evaluation import *
 
 class MetricFRanking():
 
-    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=200, N=100, batch_size=600):
+    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=100, batch_size=500):
         self.lr = learning_rate
         self.epochs = epoch
         self.N = N
@@ -16,7 +16,7 @@ class MetricFRanking():
         self.batch_size = batch_size
         self.clip_norm = 1
         self.sess = sess
-        self.beta = 3  # 2.5#0.6#2.5#1.5
+        self.beta = 1.5  # 2.5#0.6#2.5#1.5
 
     def run(self, train_data, unique_users,unique_validation, neg_train_matrix, test_matrix,  validation_matrix,k=5):
         # train_data: 训练数据
@@ -27,7 +27,7 @@ class MetricFRanking():
         self.cf_user_input = tf.placeholder(dtype=tf.int32, shape=[None], name='cf_user_input')
         self.cf_item_input = tf.placeholder(dtype=tf.int32, shape=[None], name='cf_item_input')
         # self.y = tf.placeholder("float", [None], 'y')
-        self.y = tf.placeholder(dtype=float, shape=[None], name='y')
+        self.y = tf.placeholder(dtype=tf.float32, shape=[None], name='y')
         # m * N 的矩阵，初始化用户潜在因子矩阵
         U = tf.Variable(tf.random_normal([self.num_users, self.N], stddev=1 / (self.N ** 0.5)), dtype=tf.float32)
         # n * N 的矩阵，初始化物品潜在因子矩阵
