@@ -76,9 +76,32 @@
 
          set(unique_users_validation) 这里是获取 验证集中有多少不重复的n_users
 
-3. 
+3. 主文件MetricFRandking.py
 
-   
+   1. 模型的训练结果记录发生改变
+
+      1. 评价指标采用recall、precisions、auc，
+      2. 模型一共训练10次，每次训练都会返回三组结果分别为当k=某个确定的值时候的recall、precisions、auc，
+
+   2. 构建MetricRandking类上初始化传入的值,将每次传入的数据量变为batch_size = 500 (数据量变小)
+
+   3. 模型的训练函数run()中传入的参数
+
+      train_data, 训练的数据
+
+      unique_users 用户ID列表（这里只含有测试集的用户）
+
+      unique_validation 用户ID列表（这里只含有验证集的用户）
+
+      neg_train_matrix 负面训练的矩阵
+
+      test_mtraix 测试集矩阵
+
+      validation_matrix 验证集矩阵
+
+      k 
+
+   4. 关于模型是否已经训练完毕，原程序使用的是规定模型训练的次数，而本程序使用的是使recall训练的差值小于某个值
 
    
 

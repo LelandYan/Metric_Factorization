@@ -26,7 +26,6 @@ class MetricFRanking():
 
         self.cf_user_input = tf.placeholder(dtype=tf.int32, shape=[None], name='cf_user_input')
         self.cf_item_input = tf.placeholder(dtype=tf.int32, shape=[None], name='cf_item_input')
-        # self.y = tf.placeholder("float", [None], 'y')
         self.y = tf.placeholder(dtype=tf.float32, shape=[None], name='y')
         # m * N 的矩阵，初始化用户潜在因子矩阵
         U = tf.Variable(tf.random_normal([self.num_users, self.N], stddev=1 / (self.N ** 0.5)), dtype=tf.float32)
@@ -227,12 +226,12 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         train_data, neg_train_matrix, test_data,validation_data ,test_matrix, validation_matrix,num_users, num_items, unique_users,unique_validation= load_ranking_data(df)
         model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600)
-        for num in range(1, 11):
+        for num in range(10):
             test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users,unique_validation ,neg_train_matrix,
                                                                  test_matrix, validation_matrix)
-            Ks_test_recalls[num - 1, :] = test_recalls
-            Ks_test_precisions[num - 1, :] = test_precisions
-            Aupr_values[num - 1] = test_aupr
+            Ks_test_recalls[num, :] = test_recalls
+            Ks_test_precisions[num, :] = test_precisions
+            Aupr_values[num] = test_aupr
     np.savetxt('CMLDR_recalls.txt', Ks_test_recalls, delimiter='\t')
     np.savetxt('CMLDR_precisions.txt', Ks_test_precisions, delimiter='\t')
     np.savetxt('CMLDR_Aupr_values.txt', Aupr_values, delimiter='\t')
