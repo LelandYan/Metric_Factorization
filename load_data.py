@@ -28,7 +28,7 @@ def load_data(path="data/filmtrust.dat", header=['user_id', 'item_id', 'rating']
 
 def load_ranking_data(df, test_size=0.2):
     train_data, test_data = train_test_split(df, test_size=test_size)
-    train_data, validation_data = train_test_split(train_data, test_size=0.375)
+    train_data, validation_data = train_test_split(train_data, test_size=0.25)
 
     n_users = df.user_id.max()
     n_items = df.item_id.max()
@@ -44,14 +44,14 @@ def load_ranking_data(df, test_size=0.2):
         i = line[2] - 1
         train_dict[(u, i)] = 1
 
-    count = 0
+    #count = 0
     # COO
     for u in range(n_users):
         for i in range(n_items):
             train_row.append(u)
             train_col.append(i)
             if (u, i) in train_dict.keys():
-                count = count + 1
+                #count = count + 1
                 train_rating.append(1)
             else:
                 train_rating.append(0)
@@ -62,11 +62,11 @@ def load_ranking_data(df, test_size=0.2):
 
     # 负采样
     neg_user_item_matrix = {}
-    train_user_item_matrix = []
+    #train_user_item_matrix = []
 
     for u in range(n_users):
         neg_user_item_matrix[u] = list(all_items - set(train_matrix.getrow(u).nonzero()[1]))
-        train_user_item_matrix.append(list(train_matrix.getrow(u).toarray()[0]))
+        #train_user_item_matrix.append(list(train_matrix.getrow(u).toarray()[0]))
 
     test_matrix, unique_users = form_csr_matrix(test_data, n_users, n_items)
     validation_matrix, unique_users_validation = form_csr_matrix(validation_data, n_users, n_items)
