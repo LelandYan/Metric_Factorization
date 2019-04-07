@@ -3,7 +3,7 @@ import tensorflow as tf
 import random
 from sklearn.metrics import auc
 from evaluation import *
-
+from sklearn.metrics import precision_recall_curve
 
 class MetricFRanking():
 
@@ -18,7 +18,7 @@ class MetricFRanking():
         self.sess = sess
         self.beta = 1.5  # 2.5#0.6#2.5#1.5
 
-    def run(self, train_data, unique_users,unique_validation, neg_train_matrix, test_matrix,  validation_matrix,k=5):
+    def run(self, train_data, unique_users,unique_validation, neg_train_matrix, test_matrix,  validation_matrix,k=50):
         # train_data: 训练数据
         # unique_users: 用户ID列表
         # neg_train_matrix: 负面训练矩阵
@@ -61,6 +61,7 @@ class MetricFRanking():
         self.sess.run(init)
         # train and test the model
         sample_size = 0
+
         stop_num = 20
         t_stop_num = 0
         stop_threshold = 0.005
@@ -75,9 +76,9 @@ class MetricFRanking():
             rating_temp = rating[:]
             epoch += 1
             # 从未评分的数据中采用负例
-            user_append = None
-            item_append = None
-            values_append = None
+            user_append = []
+            item_append = []
+            values_append = []
             if epoch % 5 == 0:
                 user_append = []
                 item_append = []
@@ -90,10 +91,10 @@ class MetricFRanking():
                     user_append += [u] * sample_size
                     item_append += list_of_random_items
                     values_append += [0] * sample_size
-            if user_append != None and item_append != None and values_append != None:
-                item_temp += item_append
-                user_temp += user_append
-                rating_temp += values_append
+            #if user_append != None and item_append != None and values_append != None:
+            item_temp += item_append
+            user_temp += user_append
+            rating_temp += values_append
             self.num_training = len(rating_temp)
             total_batch = int(self.num_training / self.batch_size)
 
@@ -116,12 +117,11 @@ class MetricFRanking():
             pred_ratings__valid = {}
             pred_ratings_valid = {}
             ranked_list_valid = {}
-            count = 0
             p_at_ = []
             r_at_ = []
+
             for u in unique_validation:
                 user_ids = []
-                count += 1
                 user_neg_items = neg_train_matrix[u]
                 item_ids = []
 
@@ -152,9 +152,11 @@ class MetricFRanking():
                 ranked_list = {}
                 a = []
                 b = []
+                num = - 1
+                n_aupr_values = np.zeros([len(unique_users),1])
                 for u in unique_users:
+                    num += 1
                     user_ids = []
-                    count += 1
                     user_neg_items = neg_train_matrix[u]
                     item_ids = []
 
@@ -171,21 +173,24 @@ class MetricFRanking():
                     pred_ratings_[u] = pred_ratings[u][:k]
                     #if pred_ratings_.get(u) == None or test_matrix.get(u) == None:continue
                     p_, r_ = precision_recall(k, pred_ratings_[u], test_matrix[u])
+                    precision_r, recall_r, thresholds_r = precision_recall_curve(pred_ratings_[u], test_matrix[u])
+                    aupr_value = auc(recall_r,precision_r)
+                    n_aupr_values[num] = aupr_value
                     a.append(p_)
                     b.append(r_)
-                r_aupr = auc(np.sort(b),np.array(a)[np.argsort(b)])
+
+                #r_aupr = auc(np.sort(b),np.array(a)[np.argsort(b)])
+                r_aupr = np.mean(n_aupr_values)
                 for num_k in range(1, 7):
                     k = k_Mat[num_k - 1]
 
                     pred_ratings_ = {}
                     pred_ratings = {}
                     ranked_list = {}
-                    count = 0
                     p = []
                     r = []
                     for u in unique_users:
                         user_ids = []
-                        count += 1
                         user_neg_items = neg_train_matrix[u]
                         item_ids = []
 
