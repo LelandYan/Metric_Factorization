@@ -149,6 +149,8 @@ class MetricFRanking():
                 # performance evaluation based on test set
                 pred_ratings_ = {}
                 pred_ratings = {}
+                pred_score = {}
+                pred_score_ = {}
                 ranked_list = {}
                 a = []
                 b = []
@@ -170,19 +172,27 @@ class MetricFRanking():
 
                     ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
                     pred_ratings[u] = [r[0] for r in ranked_list[u]]
-                    pred_ratings_[u] = pred_ratings[u][:k]
+                    pred_score[u] = [r[1] for r in ranked_list[u]]
+                    #pred_ratings_[u] = pred_ratings[u][:k]
+                    #pred_score_[u] = pred_score[u][:k]
+
                     #if pred_ratings_.get(u) == None or test_matrix.get(u) == None:continue
-                    p_, r_ = precision_recall(k, pred_ratings_[u], test_matrix[u])
-                    precision_r, recall_r, thresholds_r = precision_recall_curve(pred_ratings_[u], test_matrix[u])
+                    # p_, r_ = precision_recall(len(item), pred_ratings_[u], test_matrix[u])
+                    # print(pred_score_[u][:len(test_matrix[u])])
+                    # print(len(pred_score_[u][:len(test_matrix[u])]),type(pred_score_[u][:len(test_matrix[u])][0]))
+                    # print(test_matrix[u])
+                    # print(len(test_matrix[u]),type(test_matrix[u][0]))
+
+                    precision_r, recall_r, thresholds_r = precision_recall_curve(pred_score_[u][:len(test_matrix[u])], test_matrix[u])
                     aupr_value = auc(recall_r,precision_r)
                     n_aupr_values[num] = aupr_value
-                    a.append(p_)
-                    b.append(r_)
+                    #a.append(p_)
+                    #b.append(r_)
 
                 #r_aupr = auc(np.sort(b),np.array(a)[np.argsort(b)])
                 r_aupr = np.mean(n_aupr_values)
                 for num_k in range(1, 7):
-                    k = k_Mat[num_k - 1]
+                    k1 = k_Mat[num_k - 1]
 
                     pred_ratings_ = {}
                     pred_ratings = {}
@@ -204,9 +214,9 @@ class MetricFRanking():
 
                         ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
                         pred_ratings[u] = [r[0] for r in ranked_list[u]]
-                        pred_ratings_[u] = pred_ratings[u][:k]
+                        pred_ratings_[u] = pred_ratings[u][:k1]
 
-                        p_, r_ = precision_recall(k, pred_ratings_[u], test_matrix[u])
+                        p_, r_ = precision_recall(k1, pred_ratings_[u], test_matrix[u])
                         p.append(p_)
                         r.append(r_)
 
