@@ -169,8 +169,8 @@ class MetricFRanking():
                                               , feed_dict={self.cf_user_input: user_ids,
                                                            self.cf_item_input: item_ids})[0]
                     neg_item_index = list(zip(item_ids, ratings))
-                    print(ratings)
-                    print(ratings.shape)
+                    #print(ratings)
+                    #print(ratings.shape)
                     ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
                     pred_ratings[u] = [r[0] for r in ranked_list[u]]
                     pred_score[u] = [r[1] for r in ranked_list[u]]
@@ -180,6 +180,9 @@ class MetricFRanking():
                             y_true.append(1)
                         else:
                             y_true.append(0)
+
+                    print(y_true)
+                    print(len(y_true))
                     y_true = np.array(y_true)[pred_ratings[u]]
                     print(y_true)
                     print(y_true.shape)
