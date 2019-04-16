@@ -258,10 +258,11 @@ if __name__ == '__main__':
     Ks_test_recalls = np.zeros([10, 6])
     Ks_test_precisions = np.zeros([10, 6])
     Aupr_values = np.zeros([10, 1])
-    df = np.loadtxt("data/DrDiAssMat.dat")
+    df = np.loadtxt("data/DrDiAssMat.txt")
     num_users,num_items = df.shape
+
     with tf.Session() as sess:
-        train_data, neg_train_matrix, test_data,validation_data ,test_matrix, validation_matrix,unique_users,unique_validation= split_data(df)
+        train_data, neg_train_matrix, test_data, validation_data, test_matrix, validation_matrix,unique_users, unique_validation= split_data(df)
         model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600)
         for num in range(10):
             test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users,unique_validation ,neg_train_matrix,
