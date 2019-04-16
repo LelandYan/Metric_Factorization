@@ -182,10 +182,11 @@ class MetricFRanking():
                             y_true.append(0)
 
                     print(y_true)
-                    print(len(y_true))
+                    # print(len(y_true))
+                    print("y_true",np.sum(y_true))
                     y_true = np.array(y_true)[pred_ratings[u]]
-                    print(y_true)
-                    print(y_true.shape)
+                    # print(y_true)
+                    # print(y_true.shape)
                     #pred_ratings_[u] = pred_ratings[u][:k]
                     #pred_score_[u] = pred_score[u][:k]
 
@@ -195,9 +196,15 @@ class MetricFRanking():
                     # print(len(pred_score_[u][:len(test_matrix[u])]),type(pred_score_[u][:len(test_matrix[u])][0]))
                     # print(test_matrix[u])
                     # print(len(test_matrix[u]),type(test_matrix[u][0]))
-
+                    print("y_true_new:",y_true)
+                    print("y_true_new_sum:",np.sum(y_true))
+                    print("pred_score[u]",pred_score[u])
                     precision_r, recall_r, thresholds_r = precision_recall_curve(y_true, pred_score[u])
+                    print(precision_r,recall_r)
                     aupr_value = auc(recall_r,precision_r)
+                    if aupr_value == np.nan:
+                        aupr_value = 0
+                    print(aupr_value)
                     n_aupr_values[num] = aupr_value
                     #a.append(p_)
                     #b.append(r_)
