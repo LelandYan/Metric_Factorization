@@ -68,6 +68,9 @@ def load_ranking_data(df, test_size=0.2):
         neg_user_item_matrix[u] = list(all_items - set(train_matrix.getrow(u).nonzero()[1]))
         #train_user_item_matrix.append(list(train_matrix.getrow(u).toarray()[0]))
 
+
+
+
     test_matrix, unique_users = form_csr_matrix(test_data, n_users, n_items)
     validation_matrix, unique_users_validation = form_csr_matrix(validation_data, n_users, n_items)
 
