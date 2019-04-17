@@ -4,14 +4,11 @@ import numpy as np
 from scipy.sparse import csr_matrix, dok_matrix, lil_matrix
 
 
-def cal_user(data):
-    unique_users = []
-    for line in data.itertuples():
-        unique_users.append(line[1] - 1)
-
 
 def split_data(user_item_matrix, split_ratio=(3, 1, 1)):
     users, items = user_item_matrix.shape
+    unique_test_users = []
+    unique_users_validation = []
     train = dok_matrix(user_item_matrix.shape)
     validation = dok_matrix(user_item_matrix.shape)
     test = dok_matrix(user_item_matrix.shape)
@@ -19,6 +16,8 @@ def split_data(user_item_matrix, split_ratio=(3, 1, 1)):
     for user in np.arange(users):
         items = list(user_item_matrix.rows[user])
         if len(items) >= 5:
+            unique_test_users.append(user)
+            unique_users_validation.append(user)
             np.random.shuffle(items)
             train_count = round(len(items) * split_ratio[0] / sum(split_ratio))
             valid_count = round(len(items) * split_ratio[1] / sum(split_ratio))
@@ -41,7 +40,6 @@ def split_data(user_item_matrix, split_ratio=(3, 1, 1)):
         validation_user_item_matrix[u] = validation.getrow(u).nonzero()[1]
     for u in range(users):
         neg_user_item_matrix[u] = list(all_items - set(train.getrow(u).nonzero()[1]))
-    unique_test_users = cal_user((pd.DataFrame(test.toarray())))
-    unique_users_validation = cal_user((pd.DataFrame(validation.toarray())))
+
     return train.todok(), neg_user_item_matrix, test.todok(), validation.todok(), test_user_item_matrix, validation_user_item_matrix, set(
         unique_test_users), set(unique_users_validation)
