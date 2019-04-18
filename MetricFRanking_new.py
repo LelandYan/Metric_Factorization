@@ -63,7 +63,7 @@ class MetricFRanking():
         # train and test the model
         sample_size = 0
 
-        stop_num = 150
+        stop_num = 200
         t_stop_num = 0
         stop_threshold = 0.005
         pre_recall = 0
