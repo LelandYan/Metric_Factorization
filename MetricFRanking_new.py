@@ -148,13 +148,9 @@ class MetricFRanking():
                 pre_recall = np.mean(r_at_)
             if t_stop_num > stop_num:
                 # performance evaluation based on test set
-                pred_ratings_ = {}
                 pred_ratings = {}
                 pred_score = {}
-                pred_score_ = {}
                 ranked_list = {}
-                a = []
-                b = []
                 num = - 1
                 n_aupr_values = np.zeros([len(unique_users),1])
                 for u in unique_users:
@@ -170,8 +166,6 @@ class MetricFRanking():
                                               , feed_dict={self.cf_user_input: user_ids,
                                                            self.cf_item_input: item_ids})[0]
                     neg_item_index = list(zip(item_ids, ratings))
-                    #print(ratings)
-                    #print(ratings.shape)
                     ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
                     pred_ratings[u] = [r[0] for r in ranked_list[u]]
                     pred_score[u] = [r[1] for r in ranked_list[u]]
@@ -183,41 +177,15 @@ class MetricFRanking():
                         else:
                             y_true.append(0)
 
-                    # print(y_true)
-                    # print(len(y_true))
-                    # print("y_true",np.sum(y_true))
-                    # print("test_matrix[u]",test_matrix[u])
-                    # print("pred_ratings[u]",pred_ratings[u])
                     y_true = np.array(y_true)[pred_ratings[u]]
-                    # print("y_true",y_true)
-                    # print(y_true.shape)
-                    #pred_ratings_[u] = pred_ratings[u][:k]
-                    #pred_score_[u] = pred_score[u][:k]
-
-                    #if pred_ratings_.get(u) == None or test_matrix.get(u) == None:continue
-                    # p_, r_ = precision_recall(len(item), pred_ratings_[u], test_matrix[u])
-                    # print(pred_score_[u][:len(test_matrix[u])])
-                    # print(len(pred_score_[u][:len(test_matrix[u])]),type(pred_score_[u][:len(test_matrix[u])][0]))
-                    # print(test_matrix[u])
-                    # print(len(test_matrix[u]),type(test_matrix[u][0]))
-                    # print("y_true_new:",y_true)
-                    # print("y_true_new_sum:",np.sum(y_true))
-                    # print("pred_score[u]",pred_score[u])
                     if np.sum(y_true) == 0:
                         aupr_value = 0
                     else:
                         precision_r, recall_r, thresholds_r = precision_recall_curve(y_true, pred_score[u])
-                        aupr_value = auc(recall_r,precision_r)
-                    # print(aupr_value)
-                    # if aupr_value == np.nan:
-                    #     aupr_value = 0
-                    n_aupr_values[num] = aupr_value
-                    #a.append(p_)
-                    #b.append(r_)
 
-                #r_aupr = auc(np.sort(b),np.array(a)[np.argsort(b)])
+                        aupr_value = auc(recall_r,precision_r)
+                    n_aupr_values[num] = aupr_value
                 r_aupr = np.mean(n_aupr_values)
-                # print(r_aupr)
                 for num_k in range(1, 7):
                     k1 = k_Mat[num_k - 1]
 
