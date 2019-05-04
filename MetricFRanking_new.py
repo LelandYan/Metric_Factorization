@@ -157,7 +157,7 @@ class MetricFRanking():
                     num += 1
                     user_ids = []
                     user_neg_items = neg_train_matrix[u]
-
+                    #user_test_items = test_matrix[u]
                     item_ids = []
 
                     for j in user_neg_items:
@@ -166,27 +166,28 @@ class MetricFRanking():
                     ratings = - self.sess.run([self.pos_distances]
                                               , feed_dict={self.cf_user_input: user_ids,
                                                            self.cf_item_input: item_ids})[0]
-                    neg_item_index = list(zip(item_ids, ratings))
-                    ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
-                    pred_ratings[u] = [r[0] for r in ranked_list[u]]
-                    pred_score[u] = [r[1] for r in ranked_list[u]]
+                    #neg_item_index = list(zip(item_ids, ratings))
+                    #ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
+                    #pred_ratings[u] = [r[0] for r in ranked_list[u]]
+                    #pred_score[u] = [r[1] for r in ranked_list[u]]
 
                     y_true = []
-                    for i in item:
+                    for i in np.arange(self.num_items):
                         if i in test_matrix[u]:
                             y_true.append(1)
                         else:
                             y_true.append(0)
 
-                    y_true = np.array(y_true)[pred_ratings[u]]
+                    # y_true = np.array(y_true)[pred_ratings[u]]
+                    y_true = np.array(y_true)[user_neg_items]
                     if np.sum(y_true) == 0:
+                        print("1")
                         aupr_value = 0
                     else:
-                        precision_r, recall_r, thresholds_r = precision_recall_curve(y_true, pred_score[u])
+                        precision_r, recall_r, thresholds_r = precision_recall_curve(y_true, ratings)
 
                         aupr_value = auc(recall_r,precision_r)
                     n_aupr_values[num] = aupr_value
-                    print(aupr_value)
                 r_aupr = np.mean(n_aupr_values)
                 for num_k in range(1, 7):
                     k1 = k_Mat[num_k - 1]
