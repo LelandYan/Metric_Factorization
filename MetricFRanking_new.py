@@ -17,7 +17,7 @@ class MetricFRanking():
         self.batch_size = batch_size
         self.clip_norm = 1
         self.sess = sess
-        self.beta = 1.5  # 2.5#0.6#2.5#1.5
+        self.beta = 2.5 # 2.5#0.6#2.5#1.5
 
     def run(self, train_data, unique_users,unique_validation, neg_train_matrix, test_matrix,  validation_matrix,k=50):
         # train_data: 训练数据
@@ -157,6 +157,7 @@ class MetricFRanking():
                     num += 1
                     user_ids = []
                     user_neg_items = neg_train_matrix[u]
+
                     item_ids = []
 
                     for j in user_neg_items:
@@ -185,6 +186,7 @@ class MetricFRanking():
 
                         aupr_value = auc(recall_r,precision_r)
                     n_aupr_values[num] = aupr_value
+                    print(aupr_value)
                 r_aupr = np.mean(n_aupr_values)
                 for num_k in range(1, 7):
                     k1 = k_Mat[num_k - 1]
