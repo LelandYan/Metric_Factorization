@@ -8,7 +8,7 @@ from sklearn.metrics import precision_recall_curve
 
 class MetricFRanking():
 
-    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=100, batch_size=500):
+    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=50, batch_size=500):
         self.lr = learning_rate
         self.epochs = epoch
         self.N = N
@@ -181,7 +181,6 @@ class MetricFRanking():
                     # y_true = np.array(y_true)[pred_ratings[u]]
                     y_true = np.array(y_true)[user_neg_items]
                     if np.sum(y_true) == 0:
-                        print("1")
                         aupr_value = 0
                     else:
                         precision_r, recall_r, thresholds_r = precision_recall_curve(y_true, ratings)
