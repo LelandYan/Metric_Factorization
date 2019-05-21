@@ -8,7 +8,7 @@ from sklearn.metrics import precision_recall_curve
 
 class MetricFRanking():
 
-    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=100, batch_size=500):
+    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=100, batch_size=100):
         self.lr = learning_rate
         self.epochs = epoch
         self.N = N
@@ -105,7 +105,7 @@ class MetricFRanking():
             item_random = list(np.array(item_temp)[idxs])
 
             rating_random = list(np.array(rating_temp)[idxs])
-
+            f = open("loss.txt", 'w')
             for i in range(total_batch):
                 batch_user = user_random[i * self.batch_size:(i + 1) * self.batch_size]
                 batch_item = item_random[i * self.batch_size:(i + 1) * self.batch_size]
@@ -115,6 +115,8 @@ class MetricFRanking():
                                               feed_dict={self.cf_user_input: batch_user,
                                                          self.cf_item_input: batch_item,
                                                          self.y: batch_rating})
+                f.write(str(c) + "\n")
+            f.close()
             pred_ratings__valid = {}
             pred_ratings_valid = {}
             ranked_list_valid = {}
@@ -148,9 +150,6 @@ class MetricFRanking():
                 pre_recall = np.mean(r_at_)
             if t_stop_num > stop_num:
                 # performance evaluation based on test set
-                pred_ratings = {}
-                pred_score = {}
-                ranked_list = {}
                 num = - 1
                 n_aupr_values = np.zeros([len(unique_users),1])
                 for u in unique_users:
@@ -166,19 +165,12 @@ class MetricFRanking():
                     ratings = - self.sess.run([self.pos_distances]
                                               , feed_dict={self.cf_user_input: user_ids,
                                                            self.cf_item_input: item_ids})[0]
-                    #neg_item_index = list(zip(item_ids, ratings))
-                    #ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
-                    #pred_ratings[u] = [r[0] for r in ranked_list[u]]
-                    #pred_score[u] = [r[1] for r in ranked_list[u]]
-
                     y_true = []
                     for i in np.arange(self.num_items):
                         if i in test_matrix[u]:
                             y_true.append(1)
                         else:
                             y_true.append(0)
-
-                    # y_true = np.array(y_true)[pred_ratings[u]]
                     y_true = np.array(y_true)[user_neg_items]
                     if np.sum(y_true) == 0:
                         aupr_value = 0
