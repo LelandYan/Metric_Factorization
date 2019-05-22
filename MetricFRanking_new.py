@@ -8,7 +8,7 @@ from sklearn.metrics import precision_recall_curve
 
 class MetricFRanking():
 
-    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=100, batch_size=100):
+    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=200, batch_size=512):
         self.lr = learning_rate
         self.epochs = epoch
         self.N = N
@@ -63,7 +63,7 @@ class MetricFRanking():
         # train and test the model
         sample_size = 0
 
-        stop_num = 200
+        stop_num = 10
         t_stop_num = 0
         stop_threshold = 0.005
         pre_recall = 0
