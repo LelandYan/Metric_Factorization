@@ -6,9 +6,10 @@ from sklearn.metrics import auc
 from evaluation import *
 from sklearn.metrics import precision_recall_curve
 
+
 class MetricFRanking():
 
-    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=200, batch_size=512):
+    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=200, batch_size=512,DruSim=None,DisSim=None):
         self.lr = learning_rate
         self.epochs = epoch
         self.N = N
@@ -17,9 +18,16 @@ class MetricFRanking():
         self.batch_size = batch_size
         self.clip_norm = 1
         self.sess = sess
-        self.beta = 2.5 # 2.5#0.6#2.5#1.5
+        self.beta = 2.5  # 2.5#0.6#2.5#1.5
+        ###############
+        # 新加入的超参数
+        self.r = 0.1
+        self.d = 0.1
+        ###############
+        self.DruSim = DruSim
+        self.DisSim = DisSim
 
-    def run(self, train_data, unique_users,unique_validation, neg_train_matrix, test_matrix,  validation_matrix,k=50):
+    def run(self, train_data, unique_users, unique_validation, neg_train_matrix, test_matrix, validation_matrix, k=50):
         # train_data: 训练数据
         # unique_users: 用户ID列表
         # neg_train_matrix: 负面训练矩阵
@@ -28,6 +36,7 @@ class MetricFRanking():
         self.cf_user_input = tf.placeholder(dtype=tf.int32, shape=[None], name='cf_user_input')
         self.cf_item_input = tf.placeholder(dtype=tf.int32, shape=[None], name='cf_item_input')
         self.y = tf.placeholder(dtype=tf.float32, shape=[None], name='y')
+        self.wui = tf.placeholder(dtype=tf.float32, shape=[None], name='wui')
         # m * N 的矩阵，初始化用户潜在因子矩阵
         U = tf.Variable(tf.random_normal([self.num_users, self.N], stddev=1 / (self.N ** 0.5)), dtype=tf.float32)
         # n * N 的矩阵，初始化物品潜在因子矩阵
@@ -44,8 +53,9 @@ class MetricFRanking():
         self.pred = tf.reduce_sum(tf.nn.dropout(tf.squared_difference(users, pos_items), 0.95), 1, name="pred")
 
         # 物品排序的损失函数
-        self.loss = tf.reduce_sum((1 + 0.1 * self.y) * tf.square(
-            (self.y * self.pred + (1 - self.y) * tf.nn.relu(self.beta * (1 - self.y) - self.pred))))
+        # self.loss = tf.reduce_sum((1 + 0.1 * self.y) * tf.square(
+        #     (self.y * self.pred + (1 - self.y) * tf.nn.relu(self.beta * (1 - self.y) - self.pred))))
+        self.loss = tf.reduce_sum((1 + 0.1 * self.wui) * tf.square((self.beta * (1 - self.y) - self.pred)))
 
         self.optimizer = tf.train.AdagradOptimizer(self.lr).minimize(self.loss, var_list=[U, V])
         # 这里的clip_by_norm是指对梯度进行裁剪，通过控制梯度的最大范式，防止梯度爆炸的问题，是一种比较常用的梯度规约的方式。
@@ -92,7 +102,7 @@ class MetricFRanking():
                     user_append += [u] * sample_size
                     item_append += list_of_random_items
                     values_append += [0] * sample_size
-            #if user_append != None and item_append != None and values_append != None:
+            # if user_append != None and item_append != None and values_append != None:
             item_temp += item_append
             user_temp += user_append
             rating_temp += values_append
@@ -111,10 +121,53 @@ class MetricFRanking():
                 batch_item = item_random[i * self.batch_size:(i + 1) * self.batch_size]
                 batch_rating = rating_random[i * self.batch_size:(i + 1) * self.batch_size]
 
+                # 计算wui矩阵用来替换原值y
+                ########################################################
+                user_items = {}
+                item_users = {}
+                wui = []
+                for i in np.arange(len(batch_user)):
+                    if user_items.get(batch_user[i]) == None:
+                        user_items[batch_user[i]] = set()
+                    for j in np.arange(len(batch_item)):
+                        if batch_rating[j] == 1:
+                            user_items[batch_user[i]].add(batch_item[j])
+
+                for i in np.arange(len(batch_item)):
+                    if item_users.get(batch_item[i]) == None:
+                        item_users[batch_item[i]] = set()
+                    for j in np.arange(len(batch_item)):
+                        if batch_rating[j] == 1:
+                            item_users[batch_item[i]].add(batch_user[j])
+                w_r = 0
+                w_d = 0
+                for i in np.arange(len(batch_rating)):
+                    cnt = 0
+                    for item_ in user_items[batch_user[i]]:
+                        if item_ != batch_item[i]:
+                            w_r = w_r + (self.DisSim[batch_item[i]][item_])
+                            cnt += 1
+                    if cnt == 0:
+                        w_r = 0
+                    else:
+                        w_r = w_r / cnt
+                    cnt = 0
+                    for user_ in item_users[batch_item[i]]:
+                        if user_ != batch_user[i]:
+                            w_d = w_d + (self.DruSim[batch_user[i]][user_])
+                            cnt += 1
+                    if cnt == 0:
+                        w_d = 0
+                    else:
+                        w_d = w_d / cnt
+                    wui.append((w_r+w_d)/2)
+
+                ########################################################
                 _, c, p, _, _ = self.sess.run((self.optimizer, self.loss, self.pos_distances, clip_U, clip_V),
                                               feed_dict={self.cf_user_input: batch_user,
                                                          self.cf_item_input: batch_item,
-                                                         self.y: batch_rating})
+                                                         self.y: batch_rating,
+                                                         self.wui:wui})
                 f.write(str(c) + "\n")
             f.close()
             pred_ratings__valid = {}
@@ -151,12 +204,12 @@ class MetricFRanking():
             if t_stop_num > stop_num:
                 # performance evaluation based on test set
                 num = - 1
-                n_aupr_values = np.zeros([len(unique_users),1])
+                n_aupr_values = np.zeros([len(unique_users), 1])
                 for u in unique_users:
                     num += 1
                     user_ids = []
                     user_neg_items = neg_train_matrix[u]
-                    #user_test_items = test_matrix[u]
+                    # user_test_items = test_matrix[u]
                     item_ids = []
 
                     for j in user_neg_items:
@@ -177,7 +230,7 @@ class MetricFRanking():
                     else:
                         precision_r, recall_r, thresholds_r = precision_recall_curve(y_true, ratings)
 
-                        aupr_value = auc(recall_r,precision_r)
+                        aupr_value = auc(recall_r, precision_r)
                     n_aupr_values[num] = aupr_value
                 r_aupr = np.mean(n_aupr_values)
                 for num_k in range(1, 7):
@@ -227,13 +280,16 @@ if __name__ == '__main__':
     Ks_test_precisions = np.zeros([10, 6])
     Aupr_values = np.zeros([10, 1])
     df = np.loadtxt("data/DrDiAssMat.txt")
-    num_users,num_items = df.shape
-
+    num_users, num_items = df.shape
+    DruSim = np.loadtxt("data/DrugSimMat.txt")
+    DisSim = np.loadtxt("data/DiseaseSimMat.txt")
     with tf.Session() as sess:
-        train_data, neg_train_matrix, test_data, validation_data, test_matrix, validation_matrix,unique_users, unique_validation= split_data(df)
-        model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600)
+        train_data, neg_train_matrix, test_data, validation_data, test_matrix, validation_matrix, unique_users, unique_validation = split_data(
+            df)
+        model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600,DruSim=DruSim,DisSim=DisSim)
         for num in range(10):
-            test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users,unique_validation ,neg_train_matrix,
+            test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users, unique_validation,
+                                                                 neg_train_matrix,
                                                                  test_matrix, validation_matrix)
             Ks_test_recalls[num, :] = test_recalls
             Ks_test_precisions[num, :] = test_precisions
