@@ -2,6 +2,7 @@
 # _*_ coding: utf-8 _*_
 import tensorflow as tf
 import random
+import itertools
 from sklearn.metrics import auc
 from evaluation import *
 from sklearn.metrics import precision_recall_curve
@@ -9,7 +10,8 @@ from sklearn.metrics import precision_recall_curve
 
 class MetricFRanking():
 
-    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=200, batch_size=512,DruSim=None,DisSim=None):
+    def __init__(self, sess, num_users, num_items, learning_rate=0.1, epoch=150, N=200, batch_size=512, DruSim=None,
+                 DisSim=None):
         self.lr = learning_rate
         self.epochs = epoch
         self.N = N
@@ -26,6 +28,7 @@ class MetricFRanking():
         ###############
         self.DruSim = DruSim
         self.DisSim = DisSim
+        self.size = len(list(itertools.combinations(np.arange(batch_size), 2))) * 2
 
     def run(self, train_data, unique_users, unique_validation, neg_train_matrix, test_matrix, validation_matrix, k=50):
         # train_data: 训练数据
@@ -37,6 +40,11 @@ class MetricFRanking():
         self.cf_item_input = tf.placeholder(dtype=tf.int32, shape=[None], name='cf_item_input')
         self.y = tf.placeholder(dtype=tf.float32, shape=[None], name='y')
         self.wui = tf.placeholder(dtype=tf.float32, shape=[None], name='wui')
+        self.match_tuple = tf.placeholder(dtype=tf.int32, shape=[None], name='match_tuple')
+        self.user_pair_user_w = tf.placeholder(dtype=tf.float32, shape=[None], name='user_pair_user_w')
+        self.item_pair_item_w = tf.placeholder(dtype=tf.float32, shape=[None], name='item_pair_item_w')
+        self.res_user = tf.placeholder(dtype=tf.float32, shape=tf.float32, name="res_user")
+        self.res_item = tf.placeholder(dtype=tf.float32, shape=tf.float32, name="res_item")
         # m * N 的矩阵，初始化用户潜在因子矩阵
         U = tf.Variable(tf.random_normal([self.num_users, self.N], stddev=1 / (self.N ** 0.5)), dtype=tf.float32)
         # n * N 的矩阵，初始化物品潜在因子矩阵
@@ -47,6 +55,16 @@ class MetricFRanking():
         # 物品ID和对应的嵌入数据（潜在的物品向量）映射
         pos_items = tf.nn.embedding_lookup(V, self.cf_item_input)
 
+        for i in np.arange(0, self.size, 2):
+            user1 = tf.nn.embedding_lookup(U, self.match_tuple[i])
+            user2 = tf.nn.embedding_lookup(U, self.match_tuple[i + 1])
+            tf.squared_difference(user1, user2)
+            self.res_user = self.res_user + tf.squared_difference(user1, user2) * self.user_pair_user_w[int(i / 2)]
+
+        for i in np.arange(0, self.size, 2):
+            item1 = tf.nn.embedding_lookup(V, self.match_tuple[i])
+            item2 = tf.nn.embedding_lookup(V, self.match_tuple[i + 1])
+            self.res_item = self.res_item + tf.squared_difference(item1, item2) * self.item_pair_item_w[int(i / 2)]
         # 获取对应的用户和物品距离差值
         self.pos_distances = tf.reduce_sum(tf.squared_difference(users, pos_items), 1, name="pos_distances")
         # dropout ，用于优化关于神经网络的过拟合的问题
@@ -55,8 +73,10 @@ class MetricFRanking():
         # 物品排序的损失函数
         # self.loss = tf.reduce_sum((1 + 0.1 * self.y) * tf.square(
         #     (self.y * self.pred + (1 - self.y) * tf.nn.relu(self.beta * (1 - self.y) - self.pred))))
-        self.loss = tf.reduce_sum((1 + 0.1 * self.wui) * tf.square((self.beta * (1 - self.y) - self.pred)))
-
+        # self.loss = tf.reduce_sum((1 + 0.1 * self.wui) * tf.square((self.beta * (1 - self.y) - self.pred)))
+        self.loss = tf.reduce_sum(
+            (1 + 0.1 * self.wui) * tf.square((self.beta * (1 - self.y) - self.pred))) + self.r * tf.reduce_sum(
+            self.res_user) + self.d * tf.reduce_sum(self.res_item)
         self.optimizer = tf.train.AdagradOptimizer(self.lr).minimize(self.loss, var_list=[U, V])
         # 这里的clip_by_norm是指对梯度进行裁剪，通过控制梯度的最大范式，防止梯度爆炸的问题，是一种比较常用的梯度规约的方式。
         clip_U = tf.assign(U, tf.clip_by_norm(U, self.clip_norm, axes=[1]))
@@ -160,14 +180,34 @@ class MetricFRanking():
                         w_d = 0
                     else:
                         w_d = w_d / cnt
-                    wui.append((w_r+w_d)/2)
+                    wui.append((w_r + w_d) / 2)
+                ########################################################
+                # 计算损失函数中的后两项
+                user_pair_user = list(itertools.combinations(np.arange(len(batch_user)), 2))
+                user_pair_user_w = [0 for i in np.arange(len(user_pair_user))]
+                for n, (i, j) in enumerate(user_pair_user):
+                    user_pair_user_w[n] = DruSim[i][j]
 
+                item_pair_item_w = [0 for i in np.arange(len(user_pair_user))]
+                for n, (i, j) in enumerate(user_pair_user):
+                    item_pair_item_w[n] = DisSim[i][j]
+
+                match_tuple = [0 for i in np.arange(2 * len(user_pair_user))]
+                counter = 0
+                for (i, j) in user_pair_user:
+                    match_tuple[counter] = i
+                    counter += 1
+                    match_tuple[counter] = j
+                    counter += 1
                 ########################################################
                 _, c, p, _, _ = self.sess.run((self.optimizer, self.loss, self.pos_distances, clip_U, clip_V),
                                               feed_dict={self.cf_user_input: batch_user,
                                                          self.cf_item_input: batch_item,
                                                          self.y: batch_rating,
-                                                         self.wui:wui})
+                                                         self.wui: wui,
+                                                         self.match_tuple: match_tuple,
+                                                         self.user_pair_user_w: user_pair_user_w,
+                                                         self.item_pair_item_w: item_pair_item_w})
                 f.write(str(c) + "\n")
             f.close()
             pred_ratings__valid = {}
@@ -286,7 +326,8 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         train_data, neg_train_matrix, test_data, validation_data, test_matrix, validation_matrix, unique_users, unique_validation = split_data(
             df)
-        model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600,DruSim=DruSim,DisSim=DisSim)
+        model = MetricFRanking(sess, num_users, num_items, learning_rate=0.01, batch_size=600, DruSim=DruSim,
+                               DisSim=DisSim)
         for num in range(10):
             test_recalls, test_precisions, test_aupr = model.run(train_data, unique_users, unique_validation,
                                                                  neg_train_matrix,
